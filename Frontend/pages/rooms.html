@@ -99,7 +99,7 @@
 
   <script>
     const token = localStorage.getItem('whisperToken');
-    const apiBase = 'http://localhost:3000';
+    const apiBase = window.location.origin;
     const $ = (id) => document.getElementById(id);
     const parseResponse = async (response) => {
       const data = await response.json().catch(() => ({}));

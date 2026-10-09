@@ -106,7 +106,7 @@
 
   <script>
     const token = localStorage.getItem('whisperToken');
-    const apiBase = 'http://localhost:3000';
+    const apiBase = window.location.origin;
     const roomid = new URLSearchParams(window.location.search).get('roomid');
     const $ = (id) => document.getElementById(id);
     let socket = null;

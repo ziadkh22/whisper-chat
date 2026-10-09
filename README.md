@@ -40,7 +40,7 @@ Whisper is a real-time chat application built with Node.js, Express, MongoDB, Mo
    npm run dev
    ```
 
-4. Serve `Frontend/index.html` with a local web server such as VS Code Live Server. The frontend currently connects to the API and Socket.IO at `http://localhost:3000`.
+4. Open `http://localhost:3000` after starting the server. Express serves `Frontend/` and the frontend connects to the API and Socket.IO on the same origin.
 
 The health endpoint is `GET http://localhost:3000/health` and returns `{ "status": "ok" }` when the server responds.
 
@@ -71,7 +71,7 @@ Room routes require an `Authorization: Bearer <token>` header.
 Connect to the server with the JWT in the Socket.IO query:
 
 ```js
-const socket = io("http://localhost:3000", {
+const socket = io(window.location.origin, {
   query: { token: "YOUR_JWT" }
 });
 ```

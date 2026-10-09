@@ -4,12 +4,12 @@ This guide describes the HTTP and Socket.IO interfaces used by the Whisper front
 
 ## Local connection details
 
-- API and Socket.IO origin: `http://localhost:3000`
+- API and Socket.IO origin: same origin as the frontend (`window.location.origin`)
 - API prefix: `/api`
 - JSON request body limit: 2 MB
 - The server allows cross-origin frontend requests.
 
-When deploying, replace the local origin in the frontend with the deployed API origin. The frontend pages currently use `http://localhost:3000` directly.
+The Express app serves the frontend and API from the same origin. Frontend pages use relative `/api/...` URLs, and Socket.IO connects to `window.location.origin`, so this works locally and on a single-origin deployment such as Render.
 
 ## Authentication
 
@@ -144,7 +144,7 @@ Only the creator or a user already listed in the room's `members` can join a pri
 Connect using the token as a query value:
 
 ```js
-const socket = io("http://localhost:3000", {
+const socket = io(window.location.origin, {
   query: { token }
 });
 ```

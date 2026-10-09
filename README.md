@@ -88,9 +88,11 @@ const socket = io("http://localhost:3000", {
 ## Frontend pages
 
 - `Frontend/index.html` — landing page
-- `Frontend/signup.html` — account registration and optional avatar upload
-- `Frontend/login.html` — login
-- `Frontend/rooms.html` — create rooms, join by ID, and open your rooms
-- `Frontend/chat-room.html` — room details, member list, history, and live chat
+- `Frontend/pages/signup.html` — account registration and optional avatar upload
+- `Frontend/pages/login.html` — login
+- `Frontend/pages/rooms.html` — create rooms, join by ID, and open your rooms
+- `Frontend/pages/chat-room.html` — room details, member list, history, and live chat
+- `Frontend/assets/css/site.css` — shared styles
+- `Frontend/assets/images/whisper-mark.svg` — logo and favicon
 
 The chat pages load the Socket.IO client from a CDN, so the browser needs internet access for that script.

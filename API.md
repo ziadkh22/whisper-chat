@@ -123,7 +123,7 @@ Returns rooms created by or joined by the signed-in user, newest first:
 }
 ```
 
-Use `_id` for the room link and `name` for the visible label. The current frontend opens a room at `chat-room.html?roomid=ROOM_ID`.
+Use `_id` for the room link and `name` for the visible label. The current frontend opens a room at `Frontend/pages/chat-room.html?roomid=ROOM_ID`.
 
 ### Other room routes
 

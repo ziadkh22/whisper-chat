@@ -1,0 +1,329 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chat room | Whisper</title>
+  <link rel="icon" type="image/svg+xml" href="whisper-mark.svg" />
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <link rel="stylesheet" href="site.css" />
+  <style>
+    :root { --brand: #6257e8; --brand-dark: #4b43c8; --brand-soft: #eeeaff; }
+    body:has(main) { min-height: 100vh; padding: 22px; background: linear-gradient(135deg, #f0edff, #f8f7fc 48%, #eeecfa); }
+    body:has(main) main.chat-shell { width: min(1120px, 100%); max-width: none; min-height: calc(100vh - 44px); margin: auto; padding: 24px; border: 1px solid #fff; border-radius: 24px; background: #ffffffdf; box-shadow: 0 25px 70px #302b6817; text-align: left; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-bottom: 17px; border-bottom: 1px solid #ebe8f7; }
+    .topbar-actions { display: flex; align-items: center; gap: 12px; }
+    .profile-chip { display: flex; align-items: center; gap: 8px; color: #514d6e; font-size: 13px; font-weight: 700; }
+    .profile-avatar { display: inline-flex; width: 34px; height: 34px; align-items: center; justify-content: center; overflow: hidden; border: 2px solid #e5e1fb; border-radius: 50%; background: linear-gradient(135deg, #8178ef, #4b43c8); color: white; font-size: 11px; }
+    .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .back-link { display: inline-flex; align-items: center; gap: 7px; padding: 9px 13px; border: 1px solid #e2defa; border-radius: 10px; background: #f7f5ff; color: #554cc2; font-size: 13px; font-weight: 750; text-decoration: none; transition: transform .18s, background .18s, box-shadow .18s; }
+    .back-link:hover { transform: translateY(-1px); background: #eeebff; box-shadow: 0 5px 13px #5148ce20; }
+    .room-details { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 15px; padding: 18px 2px; }
+    .room-details h1 { width: 100%; margin: 0; color: #302b68; font-size: clamp(23px, 4vw, 32px); letter-spacing: -.04em; }
+    .detail { color: #77748f; font-size: 13px; }
+    .detail strong { color: #4a456b; }
+    .room-id { display: inline-block; max-width: 100%; padding: 4px 9px; border: 1px solid #e5e1fb; border-radius: 8px; background: #faf9ff; color: #6257c9; font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+    .people-panel { padding: 12px 16px; border: 1px solid #ebe8f7; border-radius: 15px 15px 0 0; background: white; }
+    .people-panel h2 { margin: 0 0 9px; color: #403a7d; font-size: 13px; }
+    #userList { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 0; }
+    #userList li { display: flex; align-items: center; gap: 7px; padding: 6px 10px 6px 6px; border: 1px solid #ebe8f7; border-radius: 99px; background: #fbfaff; color: #514d6e; font-size: 12px; }
+    .avatar { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%; background: linear-gradient(135deg, #8178ef, #4b43c8); color: white; font-size: 11px; font-weight: 750; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .message-avatar { width: 34px; height: 34px; }
+    .member-avatar { width: 25px; height: 25px; }
+    .online-dot { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; background: #aab8b1; }
+    .online-dot.online { background: #28b879; box-shadow: 0 0 0 3px #28b87920; }
+    .user-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .member-status { color: #8790a0; font-size: 11px; }
+    .typing-label { color: var(--brand-dark); font-size: 11px; font-weight: 750; }
+    .conversation { display: flex; min-height: 60vh; flex-direction: column; padding: 16px; border: 1px solid #ebe8f7; border-top: 0; border-radius: 0 0 15px 15px; background-color: #f8f7fc; background-image: radial-gradient(#e5e2f1 .7px, transparent .7px); background-size: 18px 18px; }
+    #messages { display: flex; flex: 1; min-height: 330px; max-height: 56vh; flex-direction: column; overflow-y: auto; padding: 8px; }
+    .message-row { display: flex; align-self: flex-start; align-items: flex-end; gap: 8px; max-width: min(88%, 760px); margin-bottom: 10px; }
+    .message-row.mine { align-self: flex-end; flex-direction: row-reverse; }
+    .message { max-width: calc(100% - 42px); padding: 9px 12px 7px; border: 1px solid #e8e5f0; border-radius: 4px 14px 14px 14px; background: white; box-shadow: 0 2px 3px #302b6810; animation: message-enter .2s ease-out both; }
+    .message-row.mine .message { border-color: #d8d2ff; border-radius: 14px 4px 14px 14px; background: var(--brand-soft); }
+    .message-head { display: flex; align-items: baseline; justify-content: space-between; gap: 15px; color: #827e9e; font-size: 11px; }
+    .message-head strong { color: #6257c9; font-size: 12px; }
+    .message-text { margin: 5px 0 2px; color: #302e49; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+    #roomStatus { margin: 8px 4px; color: #817e9a; font-size: 12px; }
+    #chatForm { position: relative; display: flex; align-items: center; gap: 9px; padding: 9px; border: 1px solid #e6e2f2; border-radius: 15px; background: white; }
+    #chatForm input { min-width: 0; flex: 1; margin: 0; padding: 11px; border: 0; background: transparent; box-shadow: none; }
+    #chatForm button { padding: 10px 17px; border: 0; border-radius: 10px; background: var(--brand); color: white; font: inherit; font-weight: 700; cursor: pointer; transition: background .18s, transform .18s; }
+    #chatForm button:hover { transform: translateY(-1px); background: var(--brand-dark); }
+    #chatForm #emojiToggle { padding: 5px; background: transparent; color: #7169b3; font-size: 21px; }
+    #chatForm #emojiToggle:hover { transform: none; background: #f1efff; }
+    #emojiPicker[hidden] { display: none; }
+    #emojiPicker { position: absolute; z-index: 2; bottom: calc(100% + 10px); left: 8px; display: grid; width: min(280px, calc(100vw - 70px)); grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 10px; border: 1px solid #e6e2f2; border-radius: 15px; background: white; box-shadow: 0 12px 35px #302b6826; }
+    #emojiPicker .emoji-choice { padding: 7px 0; border: 0; border-radius: 8px; background: transparent; color: inherit; font-size: 21px; line-height: 1; cursor: pointer; }
+    #emojiPicker .emoji-choice:hover { background: #f1efff; }
+    @keyframes message-enter { from { opacity: 0; transform: translateY(5px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @media (max-width: 600px) {
+      body:has(main) { padding: 10px; }
+      body:has(main) main.chat-shell { min-height: calc(100vh - 20px); padding: 16px; border-radius: 18px; }
+      .topbar { flex-wrap: wrap; }
+      .topbar-actions { width: 100%; justify-content: space-between; }
+      .profile-chip { min-width: 0; }
+      #profileName { max-width: min(42vw, 180px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .conversation { min-height: 60vh; padding: 10px; }
+      #messages { min-height: 300px; max-height: 48vh; }
+      .message-row { max-width: 94%; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <main class="chat-shell">
+    <header class="topbar">
+      <a class="brand" href="index.html"><img src="whisper-mark.svg" alt="" />Whisper</a>
+      <div class="topbar-actions">
+        <div class="profile-chip">
+          <span id="profileAvatar" class="profile-avatar" aria-hidden="true">?</span>
+          <span id="profileName">Loading...</span>
+        </div>
+      <a class="back-link" href="rooms.html"><span aria-hidden="true">&#8592;</span> Rooms</a>
+      </div>
+    </header>
+    <section class="room-details" aria-label="Room details">
+      <h1 id="roomName">Loading room...</h1>
+      <span class="detail">Room ID: <strong class="room-id" id="roomId"></strong></span>
+      <span class="detail">Created by <strong id="roomCreator">Loading...</strong></span>
+    </section>
+    <section class="people-panel">
+      <h2>People here</h2>
+      <ul id="userList"><li>Loading members...</li></ul>
+    </section>
+    <section class="conversation" aria-label="Room messages">
+      <div id="messages" aria-live="polite"></div>
+      <p id="roomStatus">Connecting to room...</p>
+      <form id="chatForm">
+        <button id="emojiToggle" type="button" aria-label="Choose an emoji" aria-expanded="false">&#128522;</button>
+        <input id="messageText" placeholder="Write a message..." autocomplete="off" />
+        <button type="submit">Send</button>
+        <div id="emojiPicker" hidden aria-label="Emoji picker"></div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const token = localStorage.getItem('whisperToken');
+    const apiBase = 'http://localhost:3000';
+    const roomid = new URLSearchParams(window.location.search).get('roomid');
+    const $ = (id) => document.getElementById(id);
+    let socket = null;
+    let currentRoomId = '';
+    let typingTimer = null;
+    let hasSentTyping = false;
+    let currentUserId = '';
+
+    const parseResponse = async (response) => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || JSON.stringify(data));
+      return data;
+    };
+
+    const loadCurrentUser = async () => {
+      try {
+        const data = await parseResponse(await fetch(`${apiBase}/api/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }));
+        const user = data.user;
+        const name = user.displayname || user.username || 'User';
+        $('profileName').textContent = name;
+        const avatar = $('profileAvatar');
+        const initials = name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() || '?';
+        if (user.avatar) {
+          const image = document.createElement('img');
+          image.src = user.avatar;
+          image.alt = '';
+          image.onerror = () => { avatar.textContent = initials; };
+          avatar.replaceChildren(image);
+        } else avatar.textContent = initials;
+      } catch {
+        $('profileName').textContent = 'Profile unavailable';
+      }
+    };
+
+    try { currentUserId = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).userid; }
+    catch { /* Token validation is handled by the server. */ }
+
+    const addMessage = (message) => {
+      const row = document.createElement('div');
+      row.className = 'message-row';
+      if (currentUserId && String(message.user?._id) === String(currentUserId)) row.classList.add('mine');
+      row.appendChild(createAvatar(message.user || {}, 'message-avatar'));
+      const bubble = document.createElement('article');
+      bubble.className = 'message';
+      const head = document.createElement('div');
+      head.className = 'message-head';
+      const sender = document.createElement('strong');
+      sender.textContent = message.user?.displayname || message.user?.username || 'Unknown user';
+      const time = document.createElement('time');
+      time.textContent = message.createdAt ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'now';
+      head.append(sender, time);
+      const body = document.createElement('p');
+      body.className = 'message-text';
+      body.textContent = message.text || '';
+      bubble.append(head, body);
+      row.appendChild(bubble);
+      $('messages').appendChild(row);
+      $('messages').scrollTop = $('messages').scrollHeight;
+    };
+
+    const createAvatar = (user, sizeClass) => {
+      const avatar = document.createElement('span');
+      avatar.className = `avatar ${sizeClass}`;
+      const name = user.displayname || user.username || '?';
+      const initials = name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() || '?';
+      if (user.avatar) {
+        const image = document.createElement('img');
+        image.src = user.avatar;
+        image.alt = `${name} avatar`;
+        image.onerror = () => { avatar.textContent = initials; };
+        avatar.appendChild(image);
+      } else {
+        avatar.textContent = initials;
+      }
+      return avatar;
+    };
+
+    const showMembers = (users) => {
+      const list = $('userList');
+      list.replaceChildren();
+      users.forEach((user) => {
+        const item = document.createElement('li');
+        item.appendChild(createAvatar(user, 'member-avatar'));
+        const dot = document.createElement('span');
+        dot.className = `online-dot${user.isOnline ? ' online' : ''}`;
+        const name = document.createElement('span');
+        name.className = 'user-name';
+        name.textContent = user.displayname || user.username;
+        item.append(dot, name);
+        const status = document.createElement('span');
+        status.className = user.isTyping ? 'typing-label' : 'member-status';
+        status.textContent = user.isTyping ? 'typing...' : (user.isOnline ? 'Online' : 'Offline');
+        item.appendChild(status);
+        list.appendChild(item);
+      });
+      if (!users.length) list.textContent = 'No room members yet.';
+    };
+
+    const loadRoomDetails = async () => {
+      try {
+        const data = await parseResponse(await fetch(`${apiBase}/api/room/getById/${encodeURIComponent(roomid)}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }));
+        const room = data.room;
+        $('roomName').textContent = room.name;
+        $('roomId').textContent = room._id;
+        $('roomCreator').textContent = room.createdby?.displayname || room.createdby?.username || 'Unknown';
+        document.title = `${room.name} | Whisper`;
+      } catch (error) {
+        $('roomName').textContent = 'Room details unavailable';
+        $('roomCreator').textContent = error.message;
+      }
+    };
+
+    const loadHistory = async () => {
+      $('messages').replaceChildren();
+      $('roomStatus').textContent = 'Loading recent messages...';
+      try {
+        const messages = await parseResponse(await fetch(`${apiBase}/api/room/roomMessages/${encodeURIComponent(roomid)}?limit=50`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }));
+        messages.reverse().forEach(addMessage);
+        $('roomStatus').textContent = messages.length ? `Showing the latest ${messages.length} messages.` : 'No messages yet. Start the conversation!';
+      } catch (error) { $('roomStatus').textContent = `Could not load messages: ${error.message}`; }
+    };
+
+    const stopTyping = () => {
+      if (typingTimer) clearTimeout(typingTimer);
+      if (socket?.connected && currentRoomId && hasSentTyping) socket.emit('typing-stop', { roomid: currentRoomId });
+      hasSentTyping = false;
+    };
+
+    if (!token) window.location.replace('login.html');
+    else if (!roomid) {
+      $('roomName').textContent = 'No room selected';
+      $('roomStatus').textContent = 'Return to Rooms and choose a room ID.';
+    } else {
+      loadCurrentUser();
+      $('roomId').textContent = roomid;
+      loadRoomDetails();
+      socket = io(apiBase, { query: { token } });
+      socket.on('connect', () => { $('roomStatus').textContent = 'Authenticating...'; });
+      socket.on('authenticated', () => {
+        $('roomStatus').textContent = 'Joining room...';
+        socket.emit('join-room', { roomid });
+      });
+      socket.on('connect_error', (error) => { $('roomStatus').textContent = `Connection error: ${error.message}`; });
+      socket.on('error', (error) => { $('roomStatus').textContent = `Room error: ${typeof error === 'string' ? error : JSON.stringify(error)}`; });
+      socket.on('joined-room', ({ roomid: joinedRoomId }) => {
+        currentRoomId = joinedRoomId;
+        $('roomStatus').textContent = 'Connected. Messages update live.';
+        loadHistory();
+      });
+      socket.on('room-users', showMembers);
+      socket.on('new-message', (message) => {
+        if (String(message.room) === String(currentRoomId)) addMessage(message);
+      });
+    }
+
+    $('chatForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const text = $('messageText').value.trim();
+      if (!currentRoomId || !socket?.connected || !text) return;
+      stopTyping();
+      socket.emit('send-message', { roomid: currentRoomId, text });
+      $('messageText').value = '';
+    });
+
+    $('messageText').addEventListener('input', () => {
+      if (!currentRoomId || !socket?.connected) return;
+      if ($('messageText').value.trim() && !hasSentTyping) {
+        socket.emit('typing-start', { roomid: currentRoomId });
+        hasSentTyping = true;
+      }
+      if (typingTimer) clearTimeout(typingTimer);
+      typingTimer = setTimeout(stopTyping, 1000);
+    });
+    $('messageText').addEventListener('blur', stopTyping);
+
+    const emojis = [
+      '\u{1F600}', '\u{1F603}', '\u{1F602}', '\u{1F60D}', '\u{1F970}', '\u{1F609}', '\u{1F60E}',
+      '\u{1F914}', '\u{1F62E}', '\u{1F622}', '\u{1F621}', '\u{1F44D}', '\u{1F44F}', '\u{1F64F}',
+      '\u{2764}\u{FE0F}', '\u{1F499}', '\u{1F49A}', '\u{1F525}', '\u{1F389}', '\u{1F4AF}', '\u{1F91D}',
+      '\u{1F44B}', '\u{1F4AA}', '\u{2728}', '\u{1F31F}', '\u{1F4A1}', '\u{2615}'
+    ];
+    const picker = $('emojiPicker');
+    emojis.forEach((emoji) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'emoji-choice';
+      button.textContent = emoji;
+      button.addEventListener('click', () => {
+        const input = $('messageText');
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? start;
+        input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
+        input.focus();
+        input.setSelectionRange(start + emoji.length, start + emoji.length);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        picker.hidden = true;
+        $('emojiToggle').setAttribute('aria-expanded', 'false');
+      });
+      picker.appendChild(button);
+    });
+    $('emojiToggle').addEventListener('click', () => {
+      picker.hidden = !picker.hidden;
+      $('emojiToggle').setAttribute('aria-expanded', String(!picker.hidden));
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !picker.hidden) {
+        picker.hidden = true;
+        $('emojiToggle').setAttribute('aria-expanded', 'false');
+      }
+    });
+  </script>
+</body>
+</html>
+

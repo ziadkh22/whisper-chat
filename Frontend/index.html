@@ -1,0 +1,63 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Whisper â€” Real-time Chat</title>
+  <link rel="icon" type="image/svg+xml" href="whisper-mark.svg" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: #f4f6fb;
+      color: #182033;
+      font: 16px Arial, sans-serif;
+    }
+    main {
+      width: min(100%, 520px);
+      padding: 48px 36px;
+      border-radius: 18px;
+      background: white;
+      box-shadow: 0 16px 50px #18203318;
+      text-align: center;
+    }
+    .logo { font-size: 42px; margin: 0 0 12px; }
+    h1 { margin: 0; font-size: 34px; }
+    p { margin: 12px 0 30px; color: #596176; line-height: 1.5; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    a {
+      display: block;
+      padding: 14px 18px;
+      border: 1px solid #4858d6;
+      border-radius: 9px;
+      color: #4858d6;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    a.primary { background: #4858d6; color: white; }
+    a:hover { filter: brightness(.95); }
+    @media (max-width: 420px) {
+      main { padding: 36px 22px; }
+      .actions { grid-template-columns: 1fr; }
+    }
+  </style>
+  <link rel="stylesheet" href="site.css" />
+</head>
+<body>
+  <main>
+    <img class="home-mark" src="whisper-mark.svg" alt="Whisper logo" />
+    <h1>Welcome to Whisper</h1>
+    <p>Simple, real-time conversations. Sign up to get started or log in to continue chatting.</p>
+    <nav class="actions" aria-label="Account actions">
+      <a class="primary" href="signup.html">Sign up</a>
+      <a href="login.html">Log in</a>
+    </nav>
+    <p><a href="rooms.html">Create or join a room</a></p>
+  </main>
+</body>
+</html>
+

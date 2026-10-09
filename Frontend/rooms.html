@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rooms | Whisper</title>
+  <link rel="icon" type="image/svg+xml" href="whisper-mark.svg" />
+  <link rel="stylesheet" href="site.css" />
+  <style>
+    body:has(main) { min-height: 100vh; padding: 28px; background: linear-gradient(135deg, #f0edff, #f8f7fc 48%, #eeecfa); }
+    body:has(main) main.app-shell { width: min(940px, 100%); max-width: none; margin: auto; padding: 30px; border: 1px solid #fff; border-radius: 24px; background: #ffffffdf; box-shadow: 0 25px 70px #302b6817; text-align: left; }
+    .app-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+    .account-box { display: flex; align-items: center; gap: 10px; }
+    .account-avatar { display: flex; width: 38px; height: 38px; align-items: center; justify-content: center; overflow: hidden; border: 2px solid #e5e1fb; border-radius: 50%; background: linear-gradient(135deg, #8178ef, #4b43c8); color: white; font-size: 13px; font-weight: 750; }
+    .account-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .account-name { max-width: 150px; overflow: hidden; color: #4a456b; font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .logout-button { width: auto; padding: 9px 13px; border: 1px solid #e5e1fb; background: #faf9ff; color: #6257c9; font-size: 13px; }
+    .logout-button:hover { background: #eeebff; box-shadow: none; }
+    h1 { margin: 0 0 7px; color: #302b68; font-size: clamp(27px, 5vw, 36px); letter-spacing: -.045em; }
+    .intro { margin: 0 0 24px; color: #817e9a; }
+    .room-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .room-card { padding: 24px; border: 1px solid #ebe8f7; border-radius: 18px; background: white; box-shadow: 0 8px 24px #382f7810; animation: rise-in .3s ease-out both; }
+    .room-card h2 { margin-top: 0; color: #393478; font-size: 19px; }
+    label { display: block; margin: 14px 0; color: #615e7a; font-size: 14px; font-weight: 650; }
+    input, textarea { display: block; width: 100%; margin-top: 7px; padding: 12px 14px; border: 1px solid #e1deef; border-radius: 11px; background: #fdfcff; color: #302e4a; font: inherit; }
+    input:focus, textarea:focus { border-color: #8178ef; box-shadow: 0 0 0 3px #6257e81b; outline: none; }
+    textarea { min-height: 84px; resize: vertical; }
+    .privacy { display: flex; align-items: center; gap: 9px; }
+    .privacy input { width: auto; margin: 0; accent-color: #6257e8; }
+    button { padding: 12px 17px; border: 0; border-radius: 11px; background: #6257e8; color: white; font: inherit; font-weight: 750; cursor: pointer; transition: background .18s ease, transform .18s ease, box-shadow .18s ease; }
+    button:hover { transform: translateY(-1px); background: #4b43c8; box-shadow: 0 5px 13px #5148ce30; }
+    .room-card button { width: 100%; }
+    pre { min-height: 18px; margin-bottom: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #625b9c; }
+    .joined-section { margin-top: 20px; padding: 23px; border: 1px solid #ebe8f7; border-radius: 18px; background: #fff; box-shadow: 0 8px 24px #382f7810; }
+    .joined-section h2 { margin-top: 0; color: #393478; font-size: 19px; }
+    .joined-room-list { display: grid; gap: 9px; padding: 0; margin: 0; list-style: none; }
+    .joined-room-item { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px solid #eceaf5; border-radius: 12px; background: #fcfbff; }
+    .joined-room-copy { min-width: 0; }
+    .joined-room-name { display: block; color: #373171; font-weight: 750; }
+    .joined-room-id { display: block; margin-top: 4px; color: #817e9a; font-family: ui-monospace, monospace; font-size: 11px; overflow-wrap: anywhere; }
+    .joined-room-actions { display: flex; flex: 0 0 auto; gap: 7px; }
+    .joined-room-item button { width: auto; padding: 9px 12px; }
+    .joined-room-item .copy-room-id { border: 1px solid #e2defa; background: #f7f5ff; color: #554cc2; }
+    .joined-room-item .copy-room-id:hover { background: #eeebff; box-shadow: none; }
+    .room-id-row { display: flex; align-items: center; gap: 9px; }
+    .room-id-row input { min-width: 0; flex: 1; }
+    .room-id-row button { width: auto; flex: 0 0 auto; }
+    @keyframes rise-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 650px) {
+      body:has(main) { padding: 12px; }
+      body:has(main) main.app-shell { padding: 20px; }
+      .room-grid { grid-template-columns: 1fr; }
+      .joined-room-item { align-items: flex-start; flex-wrap: wrap; }
+      .joined-room-actions { width: 100%; justify-content: flex-end; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="index.html"><img src="whisper-mark.svg" alt="" />Whisper</a>
+      <div class="account-box">
+        <span id="accountAvatar" class="account-avatar" aria-hidden="true">?</span>
+        <span id="accountName" class="account-name">Loading...</span>
+        <button id="logoutButton" class="logout-button" type="button">Log out</button>
+      </div>
+    </header>
+    <h1>Your conversations</h1>
+    <p class="intro">Create a room or join an existing conversation with its room ID.</p>
+
+    <div class="room-grid">
+      <section class="room-card">
+        <h2>Create a room</h2>
+        <label>Room name<input id="roomName" minlength="3" placeholder="e.g. Weekend plans" required /></label>
+        <label>Description<textarea id="description" placeholder="What is this room for?"></textarea></label>
+        <label class="privacy"><input id="isPrivate" type="checkbox" /> Private room</label>
+        <button id="createButton" type="button">Create room</button>
+        <pre id="roomResult" aria-live="polite"></pre>
+      </section>
+
+      <section class="room-card">
+        <h2>Join a room</h2>
+        <label>Room ID</label>
+        <div class="room-id-row">
+          <input id="roomId" placeholder="Paste a room ID" />
+          <button id="joinButton" type="button">Join room</button>
+        </div>
+        <pre id="joinResult" aria-live="polite"></pre>
+      </section>
+    </div>
+
+    <section class="joined-section">
+      <h2>Your joined rooms</h2>
+      <p id="joinedRoomsStatus">Loading your rooms...</p>
+      <ul id="joinedRoomList" class="joined-room-list"></ul>
+    </section>
+  </main>
+
+  <script>
+    const token = localStorage.getItem('whisperToken');
+    const apiBase = 'http://localhost:3000';
+    const $ = (id) => document.getElementById(id);
+    const parseResponse = async (response) => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || JSON.stringify(data));
+      return data;
+    };
+
+    if (!token) window.location.replace('login.html');
+
+    const loadCurrentUser = async () => {
+      try {
+        const data = await parseResponse(await fetch(`${apiBase}/api/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }));
+        const user = data.user;
+        $('accountName').textContent = user.displayname || user.username;
+        const avatar = $('accountAvatar');
+        const initials = (user.displayname || user.username || '?').trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+        if (user.avatar) {
+          const image = document.createElement('img');
+          image.src = user.avatar;
+          image.alt = '';
+          image.onerror = () => { avatar.textContent = initials || '?'; };
+          avatar.replaceChildren(image);
+        } else avatar.textContent = initials || '?';
+      } catch (error) {
+        $('accountName').textContent = 'Could not load profile';
+        if (/401|403|token/i.test(error.message)) {
+          localStorage.removeItem('whisperToken');
+          window.location.replace('login.html');
+        }
+      }
+    };
+
+    if (token) loadCurrentUser();
+    $('logoutButton').addEventListener('click', () => {
+      localStorage.removeItem('whisperToken');
+      window.location.replace('login.html');
+    });
+
+    const loadJoinedRooms = async () => {
+      try {
+        const data = await parseResponse(await fetch(`${apiBase}/api/room/myRooms`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }));
+        const list = $('joinedRoomList');
+        list.replaceChildren();
+        if (!data.rooms?.length) {
+          $('joinedRoomsStatus').textContent = 'You have not joined or created any rooms yet.';
+          return;
+        }
+        $('joinedRoomsStatus').textContent = '';
+        data.rooms.forEach((room) => {
+          const item = document.createElement('li');
+          item.className = 'joined-room-item';
+          const details = document.createElement('div');
+          details.className = 'joined-room-copy';
+          const name = document.createElement('span');
+          name.className = 'joined-room-name';
+          name.textContent = room.name;
+          const id = document.createElement('span');
+          id.className = 'joined-room-id';
+          id.textContent = room._id;
+          details.append(name, id);
+          const actions = document.createElement('div');
+          actions.className = 'joined-room-actions';
+          const copy = document.createElement('button');
+          copy.type = 'button';
+          copy.className = 'copy-room-id';
+          copy.textContent = 'Copy ID';
+          copy.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(String(room._id));
+              copy.textContent = 'Copied!';
+              setTimeout(() => { copy.textContent = 'Copy ID'; }, 1400);
+            } catch {
+              $('joinedRoomsStatus').textContent = `Could not copy automatically. Room ID: ${room._id}`;
+            }
+          });
+          const open = document.createElement('button');
+          open.type = 'button';
+          open.textContent = 'Open';
+          open.addEventListener('click', () => {
+            window.location.href = `chat-room.html?roomid=${encodeURIComponent(room._id)}`;
+          });
+          actions.append(copy, open);
+          item.append(details, actions);
+          list.appendChild(item);
+        });
+      } catch (error) {
+        $('joinedRoomsStatus').textContent = `Could not load your rooms: ${error.message}`;
+      }
+    };
+
+    if (token) loadJoinedRooms();
+
+    $('createButton').addEventListener('click', async () => {
+      const name = $('roomName').value.trim();
+      if (name.length < 3) { $('roomResult').textContent = 'Room name must have at least 3 characters.'; return; }
+      $('roomResult').textContent = 'Creating room...';
+      try {
+        const data = await parseResponse(await fetch(`${apiBase}/api/room/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ name, description: $('description').value.trim(), isprivate: $('isPrivate').checked })
+        }));
+        const roomid = data.room?._id;
+        if (!roomid) throw new Error('The room was created, but the response did not include its ID.');
+        $('roomId').value = roomid;
+        $('roomResult').textContent = `Room created. Room ID: ${roomid}`;
+        loadJoinedRooms();
+      } catch (error) { $('roomResult').textContent = `Could not create room: ${error.message}`; }
+    });
+
+    $('joinButton').addEventListener('click', () => {
+      const roomid = $('roomId').value.trim();
+      if (!roomid) { $('joinResult').textContent = 'Enter a room ID first.'; return; }
+      $('joinResult').textContent = 'Opening room...';
+      window.location.href = `chat-room.html?roomid=${encodeURIComponent(roomid)}`;
+    });
+  </script>
+</body>
+</html>

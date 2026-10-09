@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Log in | Whisper</title>
+  <link rel="icon" type="image/svg+xml" href="whisper-mark.svg" />
+  <style>
+    body { max-width: 480px; margin: 40px auto; padding: 0 16px; font: 16px Arial, sans-serif; }
+    input, button { box-sizing: border-box; width: 100%; padding: 11px; margin: 7px 0; }
+    button { cursor: pointer; }
+    #error { color: #b42318; white-space: pre-wrap; }
+  </style>
+  <link rel="stylesheet" href="site.css" />
+</head>
+<body>
+  <a class="brand" href="index.html"><img src="whisper-mark.svg" alt="" />Whisper</a>
+  <h1>Log in to Whisper</h1>
+  <form id="loginForm">
+    <label>Email<input id="email" type="email" required /></label>
+    <label>Password<input id="password" type="password" required minlength="8" /></label>
+    <button type="submit">Log in</button>
+  </form>
+  <p id="error"></p>
+  <p><a href="index.html">Home</a> · <a href="signup.html">Create an account</a></p>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const errorMessage = document.getElementById('error');
+      errorMessage.textContent = 'Signing in...';
+      try {
+        const response = await fetch('http://localhost:3000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('email').value.trim(),
+            password: document.getElementById('password').value
+          })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || JSON.stringify(data));
+        if (!data.Token) throw new Error('The server did not return an access token.');
+
+        localStorage.setItem('whisperToken', data.Token);
+        window.location.href = 'rooms.html';
+      } catch (error) {
+        errorMessage.textContent = `Login failed: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+</html>

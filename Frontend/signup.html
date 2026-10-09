@@ -1,0 +1,131 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign up | Whisper</title>
+  <link rel="icon" type="image/svg+xml" href="whisper-mark.svg" />
+  <style>
+    body { max-width: 480px; margin: 40px auto; padding: 0 16px; font: 16px Arial, sans-serif; }
+    input, button { box-sizing: border-box; width: 100%; padding: 11px; margin: 7px 0; }
+    button { cursor: pointer; }
+    pre { white-space: pre-wrap; }
+  </style>
+  <link rel="stylesheet" href="site.css" />
+</head>
+<body>
+  <a class="brand" href="index.html"><img src="whisper-mark.svg" alt="" />Whisper</a>
+  <h1>Create your Whisper account</h1>
+  <form id="signupForm">
+    <label>Username<input id="username" required minlength="3" /></label>
+    <label>Email<input id="email" type="email" required /></label>
+    <label>Password<input id="password" type="password" required minlength="8" /></label>
+    <label>Avatar image (optional, up to 1 MB)
+      <input id="avatarFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+    </label>
+    <div class="avatar-preview-wrap">
+      <img id="avatarPreview" alt="Avatar preview" hidden />
+      <span id="avatarStatus">Choose a profile picture to preview it.</span>
+      <button id="removeAvatar" type="button" hidden>Remove image</button>
+    </div>
+    <button>Create account</button>
+  </form>
+  <pre id="result" role="status" aria-live="polite">Fill in the form to sign up.</pre>
+  <nav class="signup-actions" aria-label="More options">
+    <a class="signup-action secondary" href="index.html">Home</a>
+    <a class="signup-action primary" href="login.html">Log in <span aria-hidden="true">→</span></a>
+  </nav>
+  <script>
+    let avatarData = '';
+    const avatarFile = document.getElementById('avatarFile');
+    const avatarPreview = document.getElementById('avatarPreview');
+    const avatarStatus = document.getElementById('avatarStatus');
+    const removeAvatar = document.getElementById('removeAvatar');
+
+    avatarFile.addEventListener('change', () => {
+      const file = avatarFile.files[0];
+      avatarData = '';
+      avatarPreview.hidden = true;
+      removeAvatar.hidden = true;
+      if (!file) { avatarStatus.textContent = 'Choose a profile picture to preview it.'; return; }
+      if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) {
+        avatarFile.value = '';
+        avatarStatus.textContent = 'Choose a PNG, JPEG, WebP, or GIF image.';
+        return;
+      }
+      if (file.size > 1024 * 1024) {
+        avatarFile.value = '';
+        avatarStatus.textContent = 'Image must be 1 MB or smaller.';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        avatarData = reader.result;
+        avatarPreview.src = avatarData;
+        avatarPreview.hidden = false;
+        removeAvatar.hidden = false;
+        avatarStatus.textContent = file.name;
+      };
+      reader.onerror = () => { avatarStatus.textContent = 'Could not read that image. Try another one.'; };
+      reader.readAsDataURL(file);
+    });
+
+    removeAvatar.addEventListener('click', () => {
+      avatarData = '';
+      avatarFile.value = '';
+      avatarPreview.removeAttribute('src');
+      avatarPreview.hidden = true;
+      removeAvatar.hidden = true;
+      avatarStatus.textContent = 'Choose a profile picture to preview it.';
+    });
+
+    const signupForm = document.getElementById('signupForm');
+    signupForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const result = document.getElementById('result');
+      result.className = '';
+      try {
+        const response = await fetch('http://localhost:3000/api/auth/register', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('username').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            password: document.getElementById('password').value,
+            avatar: avatarData
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || JSON.stringify(data));
+        signupForm.reset();
+        avatarData = '';
+        avatarPreview.removeAttribute('src');
+        avatarPreview.hidden = true;
+        removeAvatar.hidden = true;
+        avatarStatus.textContent = 'Choose a profile picture to preview it.';
+        result.className = 'success';
+        result.textContent = 'Registration complete! Your account is ready. Log in to continue.';
+      } catch (error) {
+        result.className = 'error';
+        result.textContent = `Signup failed: ${error.message}`;
+      }
+    });
+  </script>
+  <style>
+    .avatar-preview-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 14px; color: #77748f; font-size: 13px; }
+    #avatarPreview { width: 58px; height: 58px; border: 2px solid #e5e1fb; border-radius: 50%; object-fit: cover; }
+    #removeAvatar { width: auto; margin: 0; padding: 7px 10px; font-size: 12px; }
+    #result { padding: 13px 15px; border-radius: 12px; }
+    #result.success { border-color: #bfe8d5; background: #f0fbf5; color: #19734f; animation: signup-notice .28s ease-out both; }
+    #result.error { border-color: #f1caca; background: #fff6f6; color: #a33c48; }
+    .signup-actions { display: flex; gap: 12px; margin: 18px 0 8px; }
+    .signup-action { display: inline-flex; flex: 1; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 12px 16px; border: 1px solid #e2defa; border-radius: 12px; font-weight: 750; text-decoration: none; transition: transform .18s ease, box-shadow .18s ease, background .18s ease; }
+    .signup-action:hover { transform: translateY(-2px); box-shadow: 0 7px 18px #5148ce20; }
+    .signup-action.secondary { background: #f7f5ff; color: #554cc2; }
+    .signup-action.primary { border-color: #6257e8; background: #6257e8; color: white; }
+    .signup-action.primary:hover { background: #4b43c8; }
+    @keyframes signup-notice { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 390px) { .signup-actions { flex-direction: column; } }
+  </style>
+</body>
+</html>
+

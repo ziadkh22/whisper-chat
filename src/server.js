@@ -1,5 +1,6 @@
 const express = require('express')
 const app = express()
+const path = require('path')
 const { Server } = require('socket.io')
 const http = require('http')
 require('dotenv').config()
@@ -25,16 +26,13 @@ module.exports = io
 
 app.use(express.json({ limit: '2mb' }))
 app.use(cors())
+app.use(express.static(path.join(__dirname, '../Frontend')))
 app.use("/api/auth", authRouter)
 app.use("/api/room", roomRouter)
 
 //Health Check
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok' })
-})
-
-app.get('/', (req, res) => {
-    res.send("Hello VISITOR..")
 })
 
 app.set('io', io)

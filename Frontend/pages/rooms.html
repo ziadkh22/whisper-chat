@@ -74,7 +74,8 @@
         <h2>Create a room</h2>
         <label>Room name<input id="roomName" minlength="3" placeholder="e.g. Weekend plans" required /></label>
         <label>Description<textarea id="description" placeholder="What is this room for?"></textarea></label>
-        <label class="privacy"><input id="isPrivate" type="checkbox" /> Private room</label>
+        <label class="privacy"><input id="isPrivate" type="checkbox" /> Secured Private room</label>
+        <label>Allow members by username for Private room<input id="allowedMembers" placeholder="ahmed22, ziad"></label>
         <button id="createButton" type="button">Create room</button>
         <pre id="roomResult" aria-live="polite"></pre>
       </section>
@@ -201,10 +202,14 @@
       if (name.length < 3) { $('roomResult').textContent = 'Room name must have at least 3 characters.'; return; }
       $('roomResult').textContent = 'Creating room...';
       try {
+        const usernames = $('allowedMembers').value
+          .split(/[,;\n]+/)
+          .map(username => username.trim())
+          .filter(Boolean);
         const data = await parseResponse(await fetch(`${apiBase}/api/room/create`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ name, description: $('description').value.trim(), isprivate: $('isPrivate').checked })
+          body: JSON.stringify({ name, description: $('description').value.trim(), members: usernames, isprivate: $('isPrivate').checked })
         }));
         const roomid = data.room?._id;
         if (!roomid) throw new Error('The room was created, but the response did not include its ID.');

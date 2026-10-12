@@ -7,6 +7,8 @@ Whisper is a real-time chat application built with Node.js, Express, MongoDB, Mo
 - JWT-based registration and login
 - Optional profile avatars
 - Create rooms and view rooms you created or joined
+- Create private rooms and invite existing users by username
+- Restrict private-room access to the creator and invited members
 - Real-time room messages and recent message history
 - Room member list with online/offline status and typing indicators
 - Responsive frontend with an emoji picker
@@ -65,6 +67,25 @@ Room routes:
 | `GET` | `/api/room/roomMessages/:id` | Get room messages; accepts `limit` and `skip` query parameters |
 
 Room routes require an `Authorization: Bearer <token>` header.
+
+### Creating a room
+
+`POST /api/room/create` accepts the room name, description, privacy setting, and an optional array of usernames to invite:
+
+```json
+{
+  "name": "Weekend plans",
+  "description": "Planning the trip",
+  "isprivate": true,
+  "members": ["alex", "sam"]
+}
+```
+
+The frontend's invite field accepts usernames separated by commas, semicolons, or new lines. Usernames must match existing accounts exactly. If a username is not found, room creation fails and the response identifies the unknown username(s).
+
+The server resolves usernames to user IDs and stores those IDs as room members. The creator is also added automatically. When a user tries to join a private room through Socket.IO, the server allows the creator and invited members; other users are rejected. Joining adds the user's ID to the room's member list, so the room appears under **Your joined rooms**.
+
+Rooms created before username invitations were fixed may contain usernames in their member list. Create a new room to use the corrected ID-based membership.
 
 ## Socket.IO events
 

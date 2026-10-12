@@ -1,5 +1,6 @@
 const Room = require('../models/room.model')
 const Message = require('../models/message.model')
+const User = require('../models/user.model')
 const { validationResult } = require('express-validator')
 
 const createRoom = async (req, res, next) => {
@@ -11,15 +12,33 @@ const createRoom = async (req, res, next) => {
 
     try {
 
-        const { name, isprivate, description } = req.body
+        const { name, isprivate, description, members = [] } = req.body
         // Validations run Automatically ,check validators/room.validator.js
+
+        if (!Array.isArray(members) || members.some(username => typeof username !== 'string')) {
+            return res.status(400).json({ message: 'Members must be an array of usernames.' })
+        }
+
+        const usernames = [...new Set(members.map(username => username.trim()).filter(Boolean))]
+            .filter(username => username !== req.user.username)
+        const invitedUsers = usernames.length
+            ? await User.find({ username: { $in: usernames } }).select('_id username').lean()
+            : []
+        const foundUsernames = new Set(invitedUsers.map(user => user.username))
+        const unknownUsernames = usernames.filter(username => !foundUsernames.has(username))
+
+        if (unknownUsernames.length) {
+            return res.status(400).json({
+                message: `Unknown username${unknownUsernames.length > 1 ? 's' : ''}: ${unknownUsernames.join(', ')}`
+            })
+        }
 
         const room = await Room.create({
             name: name.trim(),
             description: description.trim(),
             isprivate: isprivate,
             createdby: req.user._id, // From jwt
-            members: [req.user._id]
+            members: [req.user._id, ...invitedUsers.map(user => user._id)]
         })
 
         const populated = await Room.findById(room._id)
